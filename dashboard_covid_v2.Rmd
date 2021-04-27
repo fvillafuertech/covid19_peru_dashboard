@@ -47,66 +47,72 @@ options(highcharter.lang = lang)
 ```
 
 ```{r global-functions, include=FALSE}
-library(httr)
-library(curl)
-library(stringr)
-library(jsonlite)
-
-authentication_token <- function(tenant, client_id, client_secret){
-  h <- new_handle()
-  handle_setform(h, 
-                 "grant_type" = "client_credentials", 
-                 "resource" = "https://management.core.windows.net/", 
-                 "client_id" = client_id, 
-                 "client_secret" = client_secret
-  )
-  path <- str_interp("https://login.windows.net/${tenant}/oauth2/token")
-  req <- curl_fetch_memory(path, handle = h)
-  res <- fromJSON(rawToChar(req$content))
-  return(paste("Bearer", res$access_token))
-}
-
-load_data <- function(datalake, path, auth_token, sep = "\u0001", colClasses = NA){
-  file_path <- str_interp("https://${datalake}.azuredatalakestore.net/webhdfs/v1/${path}?op=OPEN&read=true")
-  r <- httr::GET(file_path, add_headers(Authorization = auth_token))
-  return(read.csv(textConnection(content(r, "text", encoding = "UTF-8")), 
-                  check.names = FALSE, 
-                  sep = sep, 
-                  colClasses = colClasses) %>% dplyr::as_tibble())
-}
-
-upload_data <- function(dataset, datalake, path, auth_token){
-  write.csv(dataset, textConnection("filecontent", "w"))
-  file_path <- str_interp("https://${datalake}.azuredatalakestore.net/webhdfs/v1/${path}?op=CREATE&overwrite=true&write=true")
-  httr::PUT(file_path, 
-            body = filecontent, 
-            add_headers(Authorization = auth_token, 
-                        "Transfer-Encoding" = "chunked"))
-  return("The file is uploaded")
-}
-
-datalake_name <- "adslhatunanalytics"
-token <- authentication_token(tenant = "75382e44-1b6a-4a9e-a262-c2df3919df29",
-                              client_id = "abea3eec-d439-43fe-b4c2-37b73de745b0",
-                              client_secret = "q1_NIq8Ei975hN~.9HwkxEj~HdFwOP0B~O")
+# library(httr)
+# library(curl)
+# library(stringr)
+# library(jsonlite)
+# 
+# authentication_token <- function(tenant, client_id, client_secret){
+#   h <- new_handle()
+#   handle_setform(h, 
+#                  "grant_type" = "client_credentials", 
+#                  "resource" = "https://management.core.windows.net/", 
+#                  "client_id" = client_id, 
+#                  "client_secret" = client_secret
+#   )
+#   path <- str_interp("https://login.windows.net/${tenant}/oauth2/token")
+#   req <- curl_fetch_memory(path, handle = h)
+#   res <- fromJSON(rawToChar(req$content))
+#   return(paste("Bearer", res$access_token))
+# }
+# 
+# load_data <- function(datalake, path, auth_token, sep = "\u0001", colClasses = NA){
+#   file_path <- str_interp("https://${datalake}.azuredatalakestore.net/webhdfs/v1/${path}?op=OPEN&read=true")
+#   r <- httr::GET(file_path, add_headers(Authorization = auth_token))
+#   return(read.csv(textConnection(content(r, "text", encoding = "UTF-8")), 
+#                   check.names = FALSE, 
+#                   sep = sep, 
+#                   colClasses = colClasses) %>% dplyr::as_tibble())
+# }
+# 
+# upload_data <- function(dataset, datalake, path, auth_token){
+#   write.csv(dataset, textConnection("filecontent", "w"))
+#   file_path <- str_interp("https://${datalake}.azuredatalakestore.net/webhdfs/v1/${path}?op=CREATE&overwrite=true&write=true")
+#   httr::PUT(file_path, 
+#             body = filecontent, 
+#             add_headers(Authorization = auth_token, 
+#                         "Transfer-Encoding" = "chunked"))
+#   return("The file is uploaded")
+# }
+# 
+# datalake_name <- "adslhatunanalytics"
+# token <- authentication_token(tenant = "75382e44-1b6a-4a9e-a262-c2df3919df29",
+#                               client_id = "abea3eec-d439-43fe-b4c2-37b73de745b0",
+#                               client_secret = "q1_NIq8Ei975hN~.9HwkxEj~HdFwOP0B~O")
 ```
 
 
 ```{r global, include=FALSE}
-# dfFallecidos <- fread("https://cloud.minsa.gob.pe/s/Md37cjXmjT9qYSa/download", 
-#                       na.strings = c("", "NULL"), encoding = "UTF-8") %>% 
-#   as_tibble() %>% 
-#   # mutate_if(is.character, ~ str_conv(., "latin1")) %>% 
-#   mutate_if(is.character, str_to_title) %>% 
-#   mutate_at("FECHA_FALLECIMIENTO", ymd)
-#   # mutate_at("FECHA_FALLECIMIENTO", ~as.Date(., tryFormats = "%d%m%Y"))
+dfFallecidos <- fread("https://cloud.minsa.gob.pe/s/Md37cjXmjT9qYSa/download",
+                      na.strings = c("", "NULL"), encoding = "UTF-8") %>%
+  as_tibble() %>%
+  # mutate_if(is.character, ~ str_conv(., "latin1")) %>%
+  mutate_if(is.character, str_to_title) %>%
+  mutate_at("FECHA_FALLECIMIENTO", ymd)
+  # mutate_at("FECHA_FALLECIMIENTO", ~as.Date(., tryFormats = "%d%m%Y"))
 
-# dfPositivos <- fread("https://cloud.minsa.gob.pe/s/Y8w3wHsEdYQSZRp/download", 
-#                      na.strings = c("", "NULL"), encoding = "UTF-8") %>% 
-#   as_tibble() %>% 
-#   # mutate_if(is.character, ~ str_conv(., "latin1")) %>% 
-#   mutate_if(is.character, str_to_title) %>% 
-#   mutate_at("FECHA_RESULTADO", ymd)
+dfPositivos <- fread("https://cloud.minsa.gob.pe/s/Y8w3wHsEdYQSZRp/download",
+                     na.strings = c("", "NULL"), encoding = "UTF-8") %>%
+  as_tibble() %>%
+  # mutate_if(is.character, ~ str_conv(., "latin1")) %>%
+  mutate_if(is.character, str_to_title) %>%
+  mutate_at("FECHA_RESULTADO", ymd)
+
+dfVacunados <- fread("https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download", 
+                     na.strings = c("", "NULL"), encoding = "UTF-8") %>% 
+  as_tibble() %>% 
+  mutate_if(is.character, str_to_title) %>% 
+  mutate_at(vars(FECHA_VACUNACION), ymd)
 
 # pagCoronavirus <- read_html("https://es.wikipedia.org/wiki/Anexo:Estad%C3%ADsticas_de_la_pandemia_de_COVID-19_en_Per%C3%BA")
 
@@ -249,49 +255,81 @@ dfPeru <- ne_states(country = "peru", returnclass = "sf") %>%
 ```
 
 ```{r global-descarga-data-lake, include=FALSE}
-path_lake <- "HATUN-ANALYTICS-CONSULTING-GROUP/PROJECTS/COVID19/"
-dfRecuentoPositivosDepDist <- load_data(datalake = datalake_name, 
-                                        path = paste0(path_lake, 
-                                                      "dfRecuentoPositivosDepDist"), 
-                                        auth_token = token, 
-                                        sep = ",")
+# path_lake <- "HATUN-ANALYTICS-CONSULTING-GROUP/PROJECTS/COVID19/"
+# dfRecuentoPositivosDepDist <- load_data(datalake = datalake_name, 
+#                                         path = paste0(path_lake, 
+#                                                       "dfRecuentoPositivosDepDist"), 
+#                                         auth_token = token, 
+#                                         sep = ",")
+# 
+# dfPositivosFechas <- load_data(datalake = datalake_name,
+#                                path = paste0(path_lake,
+#                                              "dfPositivosFechas"),
+#                                auth_token = token, 
+#                                sep = ",") %>% 
+#   mutate_all(ymd)
+# 
+# dfRecuentoPositivosPruebas <- load_data(datalake = datalake_name, 
+#                                         path = paste0(path_lake, 
+#                                                       "dfRecuentoPositivosPruebas"), 
+#                                         auth_token = token, 
+#                                         sep = ",")
+# 
+# dfRecuentoPositivosSexo <- load_data(datalake = datalake_name, 
+#                                      path = paste0(path_lake, 
+#                                                    "dfRecuentoPositivosSexo"), 
+#                                      auth_token = token, 
+#                                      sep = ",")
+# dfConteoConfirmados <- load_data(datalake = datalake_name, 
+#                                  path = paste0(path_lake, 
+#                                                "tblConteoConfirmados"), 
+#                                  auth_token = token, 
+#                                  sep = ",")
+# dfConteoFallecidos <- load_data(datalake = datalake_name, 
+#                                  path = paste0(path_lake, 
+#                                                "tblConteoFallecidos"), 
+#                                  auth_token = token, 
+#                                  sep = ",")
+# dfConteoVacunados <- load_data(datalake = datalake_name, 
+#                                  path = paste0(path_lake, 
+#                                                "tblConteoVacunados"), 
+#                                  auth_token = token, 
+#                                  sep = ",")
+# 
+# dfDepartamentoCasos <- list(dfConteoConfirmados, 
+#                             dfConteoFallecidos, 
+#                             dfConteoVacunados) %>% 
+#   reduce(left_join, by = "DEPARTAMENTO") %>% 
+#   pivot_longer(cols = -DEPARTAMENTO, 
+#                names_to = "casos", 
+#                values_to = "cantidad")
+```
 
-dfPositivosFechas <- load_data(datalake = datalake_name,
-                               path = paste0(path_lake,
-                                             "dfPositivosFechas"),
-                               auth_token = token, 
-                               sep = ",") %>% 
-  mutate_all(ymd)
+```{r global-transformacion-data}
+dfPositivosFechas <- tibble(MIN_FECHA_RESULTADO = min(dfPositivos$FECHA_RESULTADO,  
+                                                      na.rm = TRUE), 
+                            MAX_FECHA_RESULTADO = max(dfPositivos$FECHA_RESULTADO, 
+                                                      na.rm = TRUE))
+dfRecuentoPositivosSexo <- dfPositivos %>% 
+  count(SEXO) %>% 
+  filter(!is.na(SEXO))
 
-dfRecuentoPositivosPruebas <- load_data(datalake = datalake_name, 
-                                        path = paste0(path_lake, 
-                                                      "dfRecuentoPositivosPruebas"), 
-                                        auth_token = token, 
-                                        sep = ",")
+dfRecuentoPositivosDepDist <- dfPositivos %>% 
+  count(DEPARTAMENTO, DISTRITO)
 
-dfRecuentoPositivosSexo <- load_data(datalake = datalake_name, 
-                                     path = paste0(path_lake, 
-                                                   "dfRecuentoPositivosSexo"), 
-                                     auth_token = token, 
-                                     sep = ",")
-dfConteoConfirmados <- load_data(datalake = datalake_name, 
-                                 path = paste0(path_lake, 
-                                               "tblConteoConfirmados"), 
-                                 auth_token = token, 
-                                 sep = ",")
-dfConteoFallecidos <- load_data(datalake = datalake_name, 
-                                 path = paste0(path_lake, 
-                                               "tblConteoFallecidos"), 
-                                 auth_token = token, 
-                                 sep = ",")
-dfConteoVacunados <- load_data(datalake = datalake_name, 
-                                 path = paste0(path_lake, 
-                                               "tblConteoVacunados"), 
-                                 auth_token = token, 
-                                 sep = ",")
+dfRecuentoPositivosPruebas <- dfPositivos %>% 
+  count(METODODX)
 
-dfDepartamentoCasos <- list(dfConteoConfirmados, 
-                            dfConteoFallecidos, 
+dfConteoConfirmados <- dfPositivos %>% 
+  count(DEPARTAMENTO, name = "CONFIRMADOS")
+
+dfConteoFallecidos <- dfFallecidos %>% 
+  count(DEPARTAMENTO, name = "FALLECIDOS")
+
+dfConteoVacunados <- dfVacunados %>% 
+  count(DEPARTAMENTO, name = "VACUNADOS")
+
+dfDepartamentoCasos <- list(dfConteoConfirmados, dfConteoFallecidos, 
                             dfConteoVacunados) %>% 
   reduce(left_join, by = "DEPARTAMENTO") %>% 
   pivot_longer(cols = -DEPARTAMENTO, 
@@ -304,6 +342,7 @@ dfDepartamentoCasos <- list(dfConteoConfirmados,
 ```{r}
 dfMapPeruCasos <- dfPeru %>% 
   left_join(dfConteoConfirmados %>% 
+              mutate_at(vars(DEPARTAMENTO), str_to_upper) %>% 
               mutate(DEPARTAMENTO = recode(DEPARTAMENTO, 
                                            "LIMA REGION" = "LIMA PROVINCIAS", 
                                            "LIMA" = "LIMA METROPOLITANA")), by = "DEPARTAMENTO") 
@@ -322,12 +361,11 @@ dfPopUp <- dfDepartamentoCasos %>%
   mutate_at(vars(Departamento), str_to_upper)
   
 dfMapPeruCasos <- dfMapPeruCasos %>% 
-  dplyr::select(DEPARTAMENTO, latitude, longitude, confirmados) %>% 
+  dplyr::select(DEPARTAMENTO, latitude, longitude, CONFIRMADOS) %>% 
   mutate(DEPARTAMENTO = recode(DEPARTAMENTO, 
                                "LIMA PROVINCIAS" = "LIMA", 
                                "LIMA METROPOLITANA" = "LIMA")) %>% 
-  left_join(dfPopUp %>% rename(DEPARTAMENTO = Departamento), by = "DEPARTAMENTO") %>% 
-  rename(CONFIRMADOS = confirmados)
+  left_join(dfPopUp %>% rename(DEPARTAMENTO = Departamento), by = "DEPARTAMENTO")
 ```
 
 ```{r objetos de configuracion de mapa}
