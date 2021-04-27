@@ -23,8 +23,8 @@ RUN add-apt-repository -y ppa:ubuntugis/ppa
 RUN apt-get update
 RUN apt-get install -y libgdal-dev
 RUN apt-get install -y gdal-bin
-apt-get install -y libgeos-dev
-apt-get install -y libproj-dev
+RUN apt-get install -y libgeos-dev
+RUN apt-get install -y libproj-dev
 
 RUN mkdir -p /var/lib/shiny-server/bookmarks/shiny
 
