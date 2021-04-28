@@ -45,6 +45,7 @@ RUN R -e 'remotes::install_version(package = "ggthemes", dependencies = TRUE)'
 RUN R -e 'remotes::install_version(package = "glue", dependencies = TRUE)'
 RUN R -e 'remotes::install_version(package = "highcharter", dependencies = TRUE)'
 RUN R -e 'remotes::install_version(package = "COVID19", version = "2.3.2", dependencies = TRUE)'
+RUN R -e 'remotes::install_version(package = "rmarkdown", dependencies = TRUE)'
 
 # Copiar el app a la imagen de shinyapps /srv/shiny-server/
 COPY . /srv/shiny-server/
